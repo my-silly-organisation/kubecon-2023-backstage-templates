@@ -1,0 +1,7 @@
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: kubecon-china
+  description: KubeCon China 2023 Demo
+spec:
+  owner: infrastructure

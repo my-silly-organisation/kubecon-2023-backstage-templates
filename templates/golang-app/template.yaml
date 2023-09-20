@@ -1,0 +1,27 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: go-app
+  title: Create a new Go app
+  description: |
+    A template for creating a new Go app with following features:
+    - GitHub Repo
+    - Tekton CI/CD
+    - KubeVela Application
+    - ArgoCD Application
+spec:
+  owner: infrastructure
+  type: service
+
+  parameters:
+  - description: The name of the app
+    name: name
+    type: string
+    required: true
+
+  steps:
+  - id: debug
+    name: First log
+    action: debug:log
+    input:
+      message: hello world!

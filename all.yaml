@@ -1,0 +1,12 @@
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: kubecon-demo-all
+  description: A collection of all Backstage entities for the KubeCon demo
+spec:
+  targets:
+  - ./groups/infra.yaml
+  - ./groups/development.yaml
+  - ./domains/kubecon-platform.yaml
+  - ./systems/kubecon-demo-system.yaml
+  - ./templates/golang-app/template.yaml
