@@ -23,11 +23,14 @@ spec:
         title: Name
         type: string
         description: Unique name of the component.
-        ui:field: EntityNamePicker
+        pattern: "^[a-z0-9-]*$"
       description:
         title: Description
         type: string
-        description: Tell us more about this component.
+        ui:widget: textarea
+        ui:options:
+          rows: 10
+        description: Tell us more about this component!
       owner:
         title: Owner
         type: string
@@ -58,7 +61,6 @@ spec:
         repoUrl: "https://github.com/${{ (parameters.repoUrl | parseRepoUrl)['owner'] }}/${{ (parameters.repoUrl | parseRepoUrl)['repo'] }}"
         description: ${{parameters.description}}
         owner: ${{parameters.owner}}
-        image: ghcr.io/${{(parameters.repoUrl | parseRepoUrl)['owner'}}/${{parameters.name}}
 
   - id: create-argo-pr
     name: Create PR to ArgoCD App of Apps repo
@@ -74,7 +76,40 @@ spec:
         created by Backstage Scaffolder
       targetPath: .
 
+  - id: remove-app-of-apps-template
+    name: Delete ArgoCD App of Apps template
+    action: fs:delete
+    input:
+      files:
+      - ${{parameters.name}}-application.yaml
+
+  - id: fetch-go-app
+    name: Render Go App
+    action: fetch:template
+    input:
+      url: ./template-app
+      values:
+        name: ${{parameters.name}}
+        description: ${{ parameters.description }}
+        repoUrl: "https://github.com/${{ (parameters.repoUrl | parseRepoUrl)['owner'] }}/${{ (parameters.repoUrl | parseRepoUrl)['repo'] }}"
+        image: ${{ (parameters.repoUrl | parseRepoUrl)['owner'] }}
+        owner: ${{parameters.owner}}
+
+  - id: publish
+    name: Publish Go App to GitHub
+    action: publish:github
+    input:
+      allowedHosts: ["github.com"]
+      repoVisibility: public
+      description: "This is ${{parameters.name}} Go App"
+      repoUrl: ${{ parameters.repoUrl }}
+      defaultBranch: main
+      requiredApprovingReviewCount: 0
+      protectDefaultBranch: false
+
   output:
     links:
-    - url: ${{steps.create-argo-pr.output.remoteUrl}}
+    - url: ${{ steps['create-argo-pr'].output.remoteUrl }}
       title: "Go to PR"
+    - title: Open the Source Code Repository
+      url: ${{ steps['publish'].output.repoContentsUrl }}

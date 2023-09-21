@@ -1,0 +1,17 @@
+apiVersion: core.oam.dev/v1beta1
+kind: Application
+metadata:
+  name: ${{values.name}}-app
+spec:
+  components:
+  - name: ${{values.name}}
+    type: webservice
+    properties:
+      image: goapp
+      ports:
+      - port: 9090
+        expose: true
+    traits:
+    - type: scaler
+      properties:
+        replicas: 1
