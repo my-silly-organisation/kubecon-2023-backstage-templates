@@ -14,14 +14,67 @@ spec:
   type: service
 
   parameters:
-  - description: The name of the app
-    name: name
-    type: string
-    required: true
-
+  - title: Provide project information
+    required:
+    - name
+    - owner
+    properties:
+      name:
+        title: Name
+        type: string
+        description: Unique name of the component.
+        ui:field: EntityNamePicker
+      description:
+        title: Description
+        type: string
+        description: Tell us more about this component.
+      owner:
+        title: Owner
+        type: string
+        description: Owner of the component
+        ui:field: OwnerPicker
+        ui:options:
+          allowedKinds:
+          - Group
+  - title: Create a new GitHub repository
+    required:
+    - repoUrl
+    properties:
+      repoUrl:
+        title: Repository Location
+        type: string
+        ui:field: RepoUrlPicker
+        ui:options:
+          allowedHosts:
+          - github.com
   steps:
-  - id: debug
-    name: First log
-    action: debug:log
+  - id: fetch-argo
+    name: Render ArgoCD Application
+    action: fetch:template
     input:
-      message: hello world!
+      url: ./template-argo
+      values:
+        name: ${{parameters.name}}
+        repoUrl: "https://github.com/${{ (parameters.repoUrl | parseRepoUrl)['owner'] }}/${{ (parameters.repoUrl | parseRepoUrl)['repo'] }}"
+        description: ${{parameters.description}}
+        owner: ${{parameters.owner}}
+        image: ghcr.io/${{(parameters.repoUrl | parseRepoUrl)['owner'}}/${{parameters.name}}
+
+  - id: create-argo-pr
+    name: Create PR to ArgoCD App of Apps repo
+    action: publish:github:pull-request
+    input:
+      repoUrl: github.com?repo=kubecon-2023-argocd&owner=my-silly-organisation
+      title: "Create new project: ${{parameters.name}}"
+      branchName: create-${{parameters.name}}
+      description: |
+        # New KubeCon China 2023 Application ${{parameters.name}}
+        
+        delivered by ArgoCD App of Apps
+        created by Backstage Scaffolder
+      targetPath: .
+
+  output:
+    links:
+    - url: ${{steps.create-argo-pr.output.remoteUrl}}
+      title: "Go to PR"

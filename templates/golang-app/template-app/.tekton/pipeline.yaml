@@ -1,0 +1,66 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: ${{values.name}}-tekton-pipeline
+spec:
+  workspaces:
+    - name: shared-workspace
+    - name: dockerconfig
+  tasks:
+    - name: clone-repo
+      taskRef:
+        name: git-clone
+        bundle: gcr.io/tekton-releases/catalog/upstream/git-clone:0.9
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+      params:
+        - name: url
+          value: ${{values.repoUrl}}
+        - name: deleteExisting
+          value: "true"
+    - name: kaniko
+      taskRef:
+        name: kaniko
+        bundle: gcr.io/tekton-releases/catalog/upstream/kaniko:0.6
+      params:
+        - name: DOCKERFILE
+          value: Dockerfile
+        - name: IMAGE
+          value: ${{values.image}}
+        - name: CONTEXT
+          value: .
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+        - name: dockerconfig
+          workspace: dockerconfig
+      runAfter:
+        - clone-repo
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: rust-pipeline-run
+spec:
+  pipelineRef:
+    name: ${{values.name}}-tekton-pipeline
+  podTemplate:
+    securityContext:
+      fsGroup: 65532
+  workspaces:
+    - name: dockerconfig
+      secret:
+        secretName: ghcr-auth
+        items:
+          - key: config.json
+            path: config.json
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
