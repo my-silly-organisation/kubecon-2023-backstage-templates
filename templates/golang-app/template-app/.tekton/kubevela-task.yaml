@@ -1,0 +1,37 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name:  ${{values.name}}-kubevela-task
+  namespace: kubecon-china-build
+spec:
+  params:
+  - name: image-digest
+    type: string
+    default: ""
+    description: image digest
+  description: >-
+    This Task builds a simple Dockerfile with kaniko and pushes to a registry.
+    This Task stores the image name and digest as results, allowing Tekton Chains to pick up
+    that an image was built & sign it.
+  workspaces:
+  - name: source
+    description: Holds the code
+  steps:
+  - name: run-kubevela
+    workingDir: $(workspaces.source.path)
+    image: oamdev/vela-cli:v1.9.6
+    script: |
+      ls -la
+      apk add curl
+      curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash   
+      mv kustomize /usr/local/bin/
+      cd .kubevela
+      if [ -z "$(params.image-digest) " ]
+      then
+        echo "Digest param is empty, using the one from kustomization.yaml"
+      else
+        kustomize edit set image goapp=ghcr.io/${{values.image}}/${{values.name}}@$(params.image-digest) 
+      fi
+      cat kustomization.yaml
+      kustomize build . | vela up -f -
+      rm vela.yaml

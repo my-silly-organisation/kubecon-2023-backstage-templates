@@ -1,37 +1,4 @@
 apiVersion: tekton.dev/v1beta1
-kind: Task
-metadata:
-  name:  ${{values.name}}-kubevela-task
-  namespace: kubecon-china-build
-spec:
-  params:
-  - name: image-digest
-    type: string
-    default: latest
-    description: image digest
-  description: >-
-    This Task builds a simple Dockerfile with kaniko and pushes to a registry.
-    This Task stores the image name and digest as results, allowing Tekton Chains to pick up
-    that an image was built & sign it.
-  workspaces:
-  - name: source
-    description: Holds the code
-  steps:
-  - name: run-kubevela
-    workingDir: $(workspaces.source.path)
-    image: oamdev/vela-cli:v1.9.6
-    script: |
-      ls -la
-      apk add curl
-      curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash   
-      mv kustomize /usr/local/bin/
-      cd .kubevela
-      kustomize edit set image goapp=ghcr.io/${{values.image}}/${{values.name}}@$(params.image-digest) 
-      cat kustomization.yaml
-      kustomize build . | vela up -f -
-      rm vela.yaml
----
-apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
   name: ${{values.name}}-tekton-pipeline
@@ -129,41 +96,3 @@ spec:
       workspace: shared-workspace
     - name: basic-auth
       workspace: basic-auth
----
-apiVersion: tekton.dev/v1beta1
-kind: PipelineRun
-metadata:
-  name: ${{values.name}}-pipeline-run
-  namespace: kubecon-china-build
-spec:
-  taskRunSpecs:
-  - pipelineTaskName: kubevela
-    taskServiceAccountName: sa-for-kubevela
-  pipelineRef:
-    name: ${{values.name}}-tekton-pipeline
-  podTemplate:
-    securityContext:
-      fsGroup: 65532
-  workspaces:
-  - name: basic-auth
-    secret:
-      secretName: basic-auth
-      items:
-      - key: .gitconfig
-        path: .gitconfig
-      - key: .git-credentials
-        path: .git-credentials
-  - name: dockerconfig
-    secret:
-      secretName: ghcr-auth
-      items:
-      - key: config.json
-        path: config.json
-  - name: shared-workspace
-    volumeClaimTemplate:
-      spec:
-        accessModes:
-        - ReadWriteOnce
-        resources:
-          requests:
-            storage: 1Gi

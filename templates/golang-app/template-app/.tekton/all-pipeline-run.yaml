@@ -1,0 +1,37 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: ${{values.name}}-all-pipeline-run
+  namespace: kubecon-china-build
+spec:
+  taskRunSpecs:
+  - pipelineTaskName: kubevela
+    taskServiceAccountName: sa-for-kubevela
+  pipelineRef:
+    name: ${{values.name}}-tekton-pipeline
+  podTemplate:
+    securityContext:
+      fsGroup: 65532
+  workspaces:
+  - name: basic-auth
+    secret:
+      secretName: basic-auth
+      items:
+      - key: .gitconfig
+        path: .gitconfig
+      - key: .git-credentials
+        path: .git-credentials
+  - name: dockerconfig
+    secret:
+      secretName: ghcr-auth
+      items:
+      - key: config.json
+        path: config.json
+  - name: shared-workspace
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi

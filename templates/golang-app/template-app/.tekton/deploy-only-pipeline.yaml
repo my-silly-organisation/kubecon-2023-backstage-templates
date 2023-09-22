@@ -1,0 +1,35 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: ${{values.name}}-deploy-only-pipeline
+  namespace: kubecon-china-build
+spec:
+  workspaces:
+  - name: shared-workspace
+  tasks:
+  - name: clone-repo
+    taskRef:
+      kind: Task
+      params:
+      - name: bundle
+        value: 'gcr.io/tekton-releases/catalog/upstream/git-clone:0.9'
+      - name: name
+        value: git-clone
+      - name: kind
+        value: Task
+      resolver: bundles
+    workspaces:
+    - name: output
+      workspace: shared-workspace
+    params:
+    - name: url
+      value: ${{values.repoUrl}}
+    - name: deleteExisting
+      value: "true"
+  - name: kubevela
+    taskRef:
+      kind: Task
+      name: ${{values.name}}-kubevela-task
+    workspaces:
+    - name: source
+      workspace: shared-workspace
