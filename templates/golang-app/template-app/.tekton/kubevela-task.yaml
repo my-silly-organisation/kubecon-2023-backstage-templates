@@ -21,17 +21,15 @@ spec:
     workingDir: $(workspaces.source.path)
     image: oamdev/vela-cli:v1.9.6
     script: |
-      ls -la
       apk add curl
       curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash   
       mv kustomize /usr/local/bin/
       cd .kubevela
-      if [ -z "$(params.image-digest) " ]
+      if [ -z $(params.image-digest) ]
       then
-        echo "Digest param is empty, using the one from kustomization.yaml"
+        echo "Digest param is empty, using the version from kustomization.yaml"
       else
         kustomize edit set image goapp=ghcr.io/${{values.image}}/${{values.name}}@$(params.image-digest) 
       fi
-      cat kustomization.yaml
       kustomize build . | vela up -f -
       rm vela.yaml
